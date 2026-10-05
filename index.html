@@ -165,6 +165,15 @@ function baseLayout(title){
     xaxis:{gridcolor:"#edf1f3",zerolinecolor:"#dfe6eb"},yaxis:{gridcolor:"#edf1f3",zerolinecolor:"#dfe6eb"},
     hoverlabel:{bgcolor:"white"},legend:{orientation:"h",y:1.12}};
 }
+// Static axes: no drag-zoom, pan, scroll-zoom or double-click reset; hover tooltips still work.
+// dragmode:false also stops Plotly from swallowing touch events, so the page scrolls on mobile.
+const PLOT_CONFIG={responsive:true,displaylogo:false,displayModeBar:false,scrollZoom:false,doubleClick:false,showAxisDragHandles:false};
+function plot(id,traces,layout){
+  layout.dragmode=false;
+  if(layout.xaxis)layout.xaxis.fixedrange=true;
+  if(layout.yaxis)layout.yaxis.fixedrange=true;
+  Plotly.react(id,traces,layout,PLOT_CONFIG);
+}
 function updateCards(d){
   document.getElementById("ncard").textContent=d.length;
   const vals=d.map(x=>x.mpPerG).filter(Number.isFinite).sort((a,b)=>a-b);
@@ -209,7 +218,7 @@ function renderBox(d){
   }).filter(Boolean);
   const layout=baseLayout("MP concentration by station");
   layout.yaxis.title="MPs g⁻¹ wet weight"; layout.xaxis.title="Sampling station"; layout.showlegend=false;
-  Plotly.react("box",traces,layout,{responsive:true,displaylogo:false,displayModeBar:false});
+  plot("box",traces,layout);
 }
 function regression(arr){
   const x=arr.map(d=>d.shellLength).filter(Number.isFinite), y=arr.map(d=>d.mpPerG).filter(Number.isFinite);
@@ -235,7 +244,7 @@ function renderScatter(d,sp,id){
   layout.xaxis.title="Shell length (mm)"; layout.yaxis.title="MPs g⁻¹ wet weight"; layout.showlegend=false;
   layout.annotations=[{x:.98,y:.98,xref:"paper",yref:"paper",xanchor:"right",yanchor:"top",
     text:reg?("r = "+(reg.r>=0?"+":"")+reg.r.toFixed(2)):"Insufficient data",showarrow:false,font:{size:16,color:colors[sp],weight:700}}];
-  Plotly.react(id,traces,layout,{responsive:true,displaylogo:false,displayModeBar:false});
+  plot(id,traces,layout);
 }
 function renderBMF(){
   const labels=Object.keys(BMF), vals=labels.map(k=>BMF[k]);
@@ -246,13 +255,13 @@ function renderBMF(){
   layout.yaxis.title="BMF"; layout.shapes=[{type:"line",x0:-.5,x1:2.5,y0:1,y1:1,line:{color:"#17212b",dash:"dash",width:2}}];
   layout.annotations=[{x:1.01,y:1,xref:"paper",yref:"y",text:"BMF = 1",showarrow:false,xanchor:"left",font:{size:12,color:"#52616c"}}];
   layout.showlegend=false;
-  Plotly.react("bmf",[trace],layout,{responsive:true,displaylogo:false,displayModeBar:false});
+  plot("bmf",[trace],layout);
 }
 function renderSize(){
   const traces=species_order.map(sp=>({type:"bar",name:sp,x:sizeLabels,y:SIZEPCT[sp],marker:{color:colors[sp]},hovertemplate:"%{x}<br>%{y:.1f}%<extra>"+sp+"</extra>"}));
   const layout=baseLayout("Microplastic size composition");
   layout.barmode="group"; layout.yaxis.title="% of represented MP"; layout.xaxis.title="Particle size class";
-  Plotly.react("size",traces,layout,{responsive:true,displaylogo:false,displayModeBar:false});
+  plot("size",traces,layout);
 }
 function renderFTIR(id,sp){
   const f=FTIR[sp];
@@ -262,7 +271,7 @@ function renderFTIR(id,sp){
   const layout={title:{text:sp==="Mytilus"?"Mytilus galloprovincialis · micro-FTIR":"Rapana venosa · micro-FTIR",font:{size:15}},
     paper_bgcolor:"white",margin:{l:10,r:10,t:55,b:15},showlegend:true,
     legend:{orientation:"h",y:-.03},annotations:[{text:"n = "+f.n+"<br>particles",showarrow:false,font:{size:13,color:"#52616c"}}]};
-  Plotly.react(id,[trace],layout,{responsive:true,displaylogo:false,displayModeBar:false});
+  plot(id,[trace],layout);
 }
 function renderBio(d){
   const vars=[
@@ -292,7 +301,7 @@ function renderBio(d){
       text:v.unit,showarrow:false,xanchor:"center",yanchor:"bottom",
       font:{size:13,color:"#17212b"}}];
     layout.showlegend=true;
-    Plotly.react(v.id,traces,layout,{responsive:true,displaylogo:false,displayModeBar:false});
+    plot(v.id,traces,layout);
   });
 }
 function renderShape(){
@@ -316,7 +325,7 @@ function renderShape(){
     layout.showlegend=true;
     layout.legend={orientation:"h",yanchor:"top",y:1.12,xanchor:"center",x:0.5};
     layout.margin={l:55,r:20,t:120,b:55};
-    Plotly.react(id,traces,layout,{responsive:true,displaylogo:false,displayModeBar:false});
+    plot(id,traces,layout);
   });
 }
 function update(){
