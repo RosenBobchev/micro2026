@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
 <title>A validated Nile red fluorescence method following KOH/H₂O₂ digestion for microplastic detection in marine molluscs</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
@@ -29,7 +30,7 @@ nav.toc{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 
 nav.toc .wrap{display:flex;gap:6px;overflow-x:auto;padding-top:8px;padding-bottom:8px;scrollbar-width:thin}
 nav.toc a{white-space:nowrap;text-decoration:none;color:var(--muted);font-size:.82rem;padding:5px 11px;border-radius:999px;border:1px solid transparent}
 nav.toc a:hover{color:var(--ink);border-color:var(--line)}
-section{padding:44px 0 6px}
+main>section{padding:44px 0 6px}
 section>.wrap>h2.sec{margin:0 0 6px;font-size:1.55rem;line-height:1.25;letter-spacing:-.01em}
 .num{color:var(--accent);font-weight:700;margin-right:6px}
 h3.q{margin:34px 0 4px;font-size:1.12rem;line-height:1.35;color:var(--ink)}
@@ -227,7 +228,6 @@ em.sp{font-style:italic}
       <span class="vbtn">▶</span>
     </button>
   </div>
-  <p style="margin-top:12px"><a class="btn" href="https://youtu.be/ehmRbTbqOKU" target="_blank" rel="noopener">▶ Watch on YouTube</a></p>
 </div></section>
 
 <section id="field"><div class="wrap">
@@ -384,16 +384,24 @@ function setup(id,H,m){
   var svg=el('svg',{viewBox:'0 0 '+W+' '+H,role:'img'},host);
   return {svg:svg,W:W,H:H,m:m};
 }
+// Narrow bars get steeper labels: neighbours stay apart once step*sin(angle) exceeds the ~15px line height
 function labels(g,items,x0,step,y,rot){
+  var a=Math.max(38,Math.min(90,Math.asin(Math.min(1,16/step))*180/Math.PI));
   items.forEach(function(it,i){
     var cx=x0+step*i+step/2;
-    var t=el('text',{x:cx,y:y,'text-anchor':rot?'end':'middle',transform:rot?'rotate(-38 '+cx+' '+y+')':''},g,it);
+    var t=el('text',{x:cx,y:y,'text-anchor':rot?'end':'middle',transform:rot?'rotate(-'+a+' '+cx+' '+y+')':''},g,it);
   });
+}
+// Grow the viewBox to everything drawn (e.g. steep labels hanging below the axis) so no text spills out of the chart
+function fit(c){
+  var b=c.svg.getBBox(),x0=Math.min(0,Math.floor(b.x)),y0=Math.min(0,Math.floor(b.y));
+  var x1=Math.max(c.W,Math.ceil(b.x+b.width)),y1=Math.max(c.H,Math.ceil(b.y+b.height)+4);
+  c.svg.setAttribute('viewBox',x0+' '+y0+' '+(x1-x0)+' '+(y1-y0));
 }
 
 /* ---------- chart 1 : before/after with SD ---------- */
 function chart1(){
-  var H=430,m={l:64,r:12,t:16,b:110},c=setup('chart1',H,m),svg=c.svg,W=c.W;
+  var H=430,m={l:72,r:12,t:16,b:110},c=setup('chart1',H,m),svg=c.svg,W=c.W;
   var iw=W-m.l-m.r,ih=H-m.t-m.b,max=0;
   MATS.forEach(function(d){max=Math.max(max,d.b+d.sb)});
   var ticks=niceTicks(max*1.04,6),top=ticks[ticks.length-1];
@@ -425,6 +433,7 @@ function chart1(){
     });
   });
   labels(g,MATS.map(function(d){return d.n}),m.l,step,y(0)+16,true);
+  fit(c);
 }
 
 /* ---------- chart 2 : % change (horizontal) ---------- */
@@ -434,7 +443,7 @@ function chart2(){
   var iw=W-m.l-m.r,ih=H-m.t-m.b;
   function x(v){return m.l+(-v)/100*iw}   // 0 at left, -100 at right
   var g=el('g',{},svg);
-  [0,-20,-40,-60,-80,-100].forEach(function(t){
+  (iw/5>=44?[0,-20,-40,-60,-80,-100]:[0,-50,-100]).forEach(function(t){
     el('line',{x1:x(t),x2:x(t),y1:m.t,y2:m.t+ih,'class':'gridline'},g);
     el('text',{x:x(t),y:m.t+ih+18,'text-anchor':'middle'},g,t+'%');
   });
@@ -452,6 +461,7 @@ function chart2(){
     el('text',{x:inside?x(d.p)-6:x(d.p)+6,y:cy+4,'text-anchor':inside?'end':'start','class':'val','style':inside?'fill:#fff':''},g,d.p.toFixed(1)+'%');
     bind(rect,'<b>'+d.n+'</b><br>'+d.p.toFixed(1)+'% change in intensity');
   });
+  fit(c);
 }
 
 /* ---------- chart 3 : true degradation ---------- */
@@ -468,13 +478,19 @@ function chart3(){
   var ty=m.t+ih/2;
   el('text',{x:14,y:ty,'class':'axis-title','text-anchor':'middle',transform:'rotate(-90 14 '+ty+')'},g,'Net material loss (%)');
   var step=iw/MATS.length,bw=Math.min(40,step*.62);
-  MATS.forEach(function(d,i){
+  var vals=MATS.map(function(d,i){
     var cx=m.l+step*i+step/2,col=d.t==='s'?css('--syn'):css('--nat');
     var rect=el('rect',{x:cx-bw/2,y:y(d.d),width:bw,height:y(0)-y(d.d),fill:col,rx:2},g);
-    el('text',{x:cx,y:y(d.d)-6,'text-anchor':'middle','class':'val'},g,d.d.toFixed(1)+'%');
     bind(rect,'<b>'+d.n+'</b><br>True degradation: '+d.d.toFixed(2)+'%');
+    return el('text',{x:cx,y:y(d.d)-6,'text-anchor':'middle','class':'val'},g,d.d.toFixed(1)+'%');
+  });
+  // Bars narrower than their values: stand the values on end so neighbours can't collide
+  if(vals.some(function(t){return t.getComputedTextLength()+4>step}))vals.forEach(function(t){
+    var tx=t.getAttribute('x'),ty=t.getAttribute('y');
+    t.setAttribute('text-anchor','start');t.setAttribute('dy','.35em');t.setAttribute('transform','rotate(-90 '+tx+' '+ty+')');
   });
   labels(g,MATS.map(function(d){return d.n}),m.l,step,y(0)+16,true);
+  fit(c);
 }
 
 /* ---------- boxplot ---------- */
@@ -512,6 +528,7 @@ function box(){
     var hit=el('rect',{x:cx-bw/2-10,y:m.t,width:bw+20,height:ih,fill:'transparent'},g);
     bind(hit,info);
   });
+  fit(c);
 }
 document.querySelectorAll('.seg button').forEach(function(b){
   b.addEventListener('click',function(){
@@ -539,7 +556,8 @@ document.querySelectorAll('.seg button').forEach(function(b){
   var sat=L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',{maxZoom:20,attribution:'Imagery © Google'});
   var hyb=L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',{maxZoom:20,attribution:'Imagery © Google'});
   var map=L.map(host,{layers:[sat],scrollWheelZoom:false});
-  L.control.layers({'Satellite':sat,'Satellite + labels':hyb},null,{collapsed:false}).addTo(map);
+  // Collapsed to an icon on phones, where the open list covered the northern stations
+  L.control.layers({'Satellite':sat,'Satellite + labels':hyb},null,{collapsed:host.clientWidth<600}).addTo(map);
   map.on('focus',function(){map.scrollWheelZoom.enable()});map.on('blur',function(){map.scrollWheelZoom.disable()});
   var pts=[];
   STN.forEach(function(s){
@@ -580,9 +598,10 @@ document.querySelectorAll('.cmp').forEach(function(c){
 (function(){
   var v=document.getElementById('vid');if(!v)return;
   v.querySelector('.vplay').addEventListener('click',function(){
+    // YouTube refuses embedded playback on a page opened from disk (no referrer), so only then open it on YouTube
     if(location.protocol==='file:'){window.open('https://www.youtube.com/watch?v='+v.getAttribute('data-id'),'_blank','noopener');return}
     var f=document.createElement('iframe');
-    f.src='https://www.youtube.com/embed/'+v.getAttribute('data-id')+'?autoplay=1&rel=0';
+    f.src='https://www.youtube.com/embed/'+v.getAttribute('data-id')+'?autoplay=1&rel=0&playsinline=1';
     f.title='Microplastic Annotation Package guide video';
     f.allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
     f.setAttribute('allowfullscreen','');
